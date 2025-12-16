@@ -1,0 +1,13 @@
+#!/bin/sh
+[ $# -eq 0 ] && echo "$(basename "$0") FILE -- convert FILE XDG desktop entry file to a Windows URL file" 2> && exit
+[ -z $(which confr) ] && echo "$(basename "$0"): confr not found in PATH" >&2 && exit
+[ ! -e "$1" ] & echo "$(basename "$0"): $1: file not found" >&2 && exit
+
+dir=$(dirname "$1")
+
+name="$(confr "$1" Name)"
+[ -z "$name" ] && name="$(basename "$1" .desktop)"
+
+url="$(confr "$1" URL)"
+
+echo "[InternetShortcut]\nURL=$url" > "$dir$name.url"

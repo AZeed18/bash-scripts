@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+[ $# -lt 2 ] && echo "$(basename "$0") APPID COMMAND [ARGS] -- run COMMAND using Steam Proton for APPID" 2> && exit
+
+IFS=$'\n'
+
+# find Proton version set for the app in libraryfolders.vdf VDF file
+LIBRARIES="$(sed -n "s/\s*\"path\"\s*\"\(.*\)\"/\1/p" ~/.steam/steam/steamapps/libraryfolders.vdf)"
+
+# search for Proton prefix of the app
+for lib in $LIBRARIES; do
+	export STEAM_COMPAT_DATA_PATH="$(find "$lib/steamapps/compatdata" -maxdepth 1 -name "$1" 2> /dev/null)"
+	[ "$STEAM_COMPAT_DATA_PATH" ] && break
+done
+[ -z "$STEAM_COMPAT_DATA_PATH" ] && echo "$(basename "$0"): Can't find Proton prefix for app ID $1" >&2 && exit
+
+# find Proton version set for the app in config.vdf VDF file
+PROTON_VERSION=$(cat ~/.steam/steam/config/config.vdf | tr '\n' ' ' | sed -nE "s/.*?\"$1\".*?name.*?\"proton_(\w+)\".*/\1\n/p")
+
+# convert version to title case
+PROTON_VERSION=$(echo "$PROTON_VERSION" | sed "s/\(.\)/\u\1/")
+
+# search for installation path of version PROTON_VERSION of Proton
+for lib in $LIBRARIES; do
+	export STEAM_COMPAT_CLIENT_INSTALL_PATH="$(find "$lib/steamapps/common" -maxdepth 1 -name "Proton* $PROTON_VERSION*")"
+	[ "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ] && break
+done
+[ -z "$STEAM_COMPAT_CLIENT_INSTALL_PATH" ] && echo "$(basename "$0"): Can't find Proton $PROTON_VERSION" >&2 && exit
+
+echo "Running $STEAM_COMPAT_CLIENT_INSTALL_PATH for $STEAM_COMPAT_DATA_PATH"
+"$STEAM_COMPAT_CLIENT_INSTALL_PATH/proton" run "${@:2}"
